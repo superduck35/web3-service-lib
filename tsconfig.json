@@ -16,6 +16,14 @@
     "lib": [
       "es2017",
       "dom"
-    ]
+    ],
+    "paths": {
+      "web3-service-lib": [
+        "dist/web3-service-lib"
+      ],
+      "web3-service-lib/*": [
+        "dist/web3-service-lib/*"
+      ]
+    }
   }
 }

@@ -29,12 +29,10 @@
           },
           "configurations": {
             "production": {
-              "fileReplacements": [
-                {
-                  "replace": "src/environments/environment.ts",
-                  "with": "src/environments/environment.prod.ts"
-                }
-              ],
+              "fileReplacements": [{
+                "replace": "src/environments/environment.ts",
+                "with": "src/environments/environment.prod.ts"
+              }],
               "optimization": true,
               "outputHashing": "all",
               "sourceMap": false,
@@ -115,6 +113,46 @@
           "builder": "@angular-devkit/build-angular:tslint",
           "options": {
             "tsConfig": "e2e/tsconfig.e2e.json",
+            "exclude": [
+              "**/node_modules/**"
+            ]
+          }
+        }
+      }
+    },
+    "web3-service-lib": {
+      "root": "projects/web3-service-lib",
+      "sourceRoot": "projects/web3-service-lib/src",
+      "projectType": "library",
+      "prefix": "w3s",
+      "architect": {
+        "build": {
+          "builder": "@angular-devkit/build-ng-packagr:build",
+          "options": {
+            "tsConfig": "projects/web3-service-lib/tsconfig.lib.json",
+            "project": "projects/web3-service-lib/ng-package.json"
+          },
+          "configurations": {
+            "production": {
+              "project": "projects/web3-service-lib/ng-package.prod.json"
+            }
+          }
+        },
+        "test": {
+          "builder": "@angular-devkit/build-angular:karma",
+          "options": {
+            "main": "projects/web3-service-lib/src/test.ts",
+            "tsConfig": "projects/web3-service-lib/tsconfig.spec.json",
+            "karmaConfig": "projects/web3-service-lib/karma.conf.js"
+          }
+        },
+        "lint": {
+          "builder": "@angular-devkit/build-angular:tslint",
+          "options": {
+            "tsConfig": [
+              "projects/web3-service-lib/tsconfig.lib.json",
+              "projects/web3-service-lib/tsconfig.spec.json"
+            ],
             "exclude": [
               "**/node_modules/**"
             ]
