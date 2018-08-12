@@ -1,6 +1,7 @@
 {
   "name": "web3-service-lib",
   "version": "0.0.1",
+  "readme": "README.md",
   "repository": {
     "type": "git",
     "url": "https://github.com/alsco77/web3-service-lib"
