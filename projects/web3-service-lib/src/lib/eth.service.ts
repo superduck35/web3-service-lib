@@ -142,7 +142,7 @@ export class EthService implements OnDestroy {
     return new Promise((resolve, reject) => {
       try {
         this.http.get(gasStationApi).toPromise().then(res => {
-          if (res.ok) {
+          if (res.status === 200) {
             resolve(JSON.parse(res.text())['fast'].toString() + '00000000');
           } else {
             resolve('11000000000');
@@ -158,13 +158,13 @@ export class EthService implements OnDestroy {
     return new this.web3js.eth.Contract(abi, address);
   }
 
-  payEth(recipient, amount, from = this.account.value): Promise<any> {
+  payEth(recipient: string, amount: number, from = this.account.value): Promise<any> {
     return new Promise(async (resolve, reject) => {
       const gasPrice = await this.getDefaultGasPriceGwei();
       const tx = await this.web3js.eth.sendTransaction({
         from,
         to: recipient,
-        value: this.web3js.utils.toWei(amount),
+        value: this.web3js.utils.toWei(amount.toString()),
         gas: 21001,
         gasPrice
       }, (err, txHash) => this.resolveTransaction(err, txHash, resolve, reject));
