@@ -1,8 +1,31 @@
 {
   "name": "web3-service-lib",
   "version": "0.0.1",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/alsco77/web3-service-lib"
+  },
+  "author": {
+    "name": "Alex Scott",
+    "email": "alsco77@pm.me"
+  },
+  "keywords": [
+    "angular",
+    "web3",
+    "ethereum",
+    "service"
+  ],
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/alsco77/web3-service-lib/issues"
+  },
   "peerDependencies": {
     "@angular/common": "^6.0.0-rc.0 || ^6.0.0",
-    "@angular/core": "^6.0.0-rc.0 || ^6.0.0"
+    "@angular/core": "^6.0.0-rc.0 || ^6.0.0",
+    "@angular/http": "^6.0.0-rc.0 || ^6.0.0",
+    "rxjs": "^6.0.0"
+  },
+  "dependencies": {
+    "web3": "^1.0.0-beta.35"
   }
 }

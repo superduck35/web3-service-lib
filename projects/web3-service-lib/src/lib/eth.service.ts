@@ -138,7 +138,7 @@ export class EthService implements OnDestroy {
     return gas;
   }
 
-  get defaultGasPriceGwei(): Promise<string> {
+  getDefaultGasPriceGwei(): Promise<string> {
     return new Promise((resolve, reject) => {
       try {
         this.http.get(gasStationApi).toPromise().then(res => {
@@ -157,6 +157,34 @@ export class EthService implements OnDestroy {
   createContractInstance(abi, address) {
     return new this.web3js.eth.Contract(abi, address);
   }
+
+  payEth(recipient, amount, from = this.account.value): Promise<any> {
+    return new Promise(async (resolve, reject) => {
+      const gasPrice = await this.getDefaultGasPriceGwei();
+      const tx = await this.web3js.eth.sendTransaction({
+        from,
+        to: recipient,
+        value: this.web3js.utils.toWei(amount),
+        gas: 21001,
+        gasPrice
+      }, (err, txHash) => this.resolveTransaction(err, txHash, resolve, reject));
+    });
+  }
+
+
+  async resolveTransaction(err, txHash, resolve, reject) {
+    if (err) {
+      reject(err);
+    }
+    try {
+      const receipt = await this.getTransactionReceiptMined(txHash);
+      receipt.status = typeof (receipt.status) === 'boolean' ? receipt.status : this.web3js.utils.hexToNumber(receipt.status);
+      resolve(receipt);
+    } catch (e) {
+      reject(e);
+    }
+  }
+
 
   getTransactionReceiptMined(txHash, interval = 500, blockLimit = 0): Promise<any> {
     const transactionReceiptAsync = (resolve, reject) => {
