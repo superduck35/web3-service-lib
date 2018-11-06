@@ -9,13 +9,14 @@ import { EthService } from './eth.service';
     HttpModule
   ],
   declarations: [],
-  exports: []
+  exports: [],
+  providers: [EthService]
 })
 export class Web3ServiceModule {
-  static forRoot(): ModuleWithProviders {
+  static forRoot(config: any): ModuleWithProviders {
     return {
       ngModule: Web3ServiceModule,
-      providers: [EthService]
+      providers: [{ provide: 'config', useValue: config }]
     };
   }
 }

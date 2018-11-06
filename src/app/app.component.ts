@@ -31,7 +31,7 @@ export class AppComponent implements OnInit, OnDestroy {
   sendEthTransaction() {
     console.log('Paying ETH');
     this.pendingTx = true;
-    this.web3Service.payEth('0xfb1d7f6c700a053683f80447b387a891d5f76aac', 0.01)
+    this.web3Service.payWithEth('0xfb1d7f6c700a053683f80447b387a891d5f76aac', 0.01)
       .then(tx => tx.status === 0 ? console.log('Transaction failed') : console.log('Transaction success'))
       .catch(err => console.log('Error'))
       .then(() => this.pendingTx = false);

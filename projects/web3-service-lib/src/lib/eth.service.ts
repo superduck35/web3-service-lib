@@ -1,9 +1,8 @@
 import { Inject, Injectable, OnDestroy } from '@angular/core';
 import { Http, Response } from '@angular/http';
-import merge from 'lodash.merge';
 import { BehaviorSubject, Observable, Subject, Subscription } from 'rxjs';
 
-import { Step } from '../canpay-wizard/canpay-wizard.component';
+import { AngularWaitBarrier } from 'blocking-proxy/built/lib/angular_wait_barrier';
 
 declare let require: any;
 const Web3 = require('web3');
@@ -27,7 +26,7 @@ export enum NetworkType {
 
 export enum Web3LoadingStatus {
   loading = 'Wallet loading is in progress',
-  unableToConnectToSelectedNetwork = 'Unable to connect to the selected network.', ',
+  unableToConnectToSelectedNetwork = 'Unable to connect to the selected network.',
   noMetaMask = 'Wallet is not connected.',
   noAccountsAvailable = 'Your wallet is locked or there are no accounts available.',
   wrongNetwork = 'Your wallet is connected to the wrong Network.',
@@ -49,7 +48,7 @@ export class EthService implements OnDestroy {
   public account = new BehaviorSubject<string>(null);
   public account$ = this.account.asObservable();
 
-  constructor(protected http: Http) {
+  constructor(@Inject('config') private conf: any = {}, protected http: Http) {
     if (typeof window.ethereum !== 'undefined') {
 
       this.web3js = new Web3(window.ethereum);
@@ -112,9 +111,7 @@ export class EthService implements OnDestroy {
   }
 
   private setUpAccounts() {
-    if ((this.conf.useTestNet && (this.netType === NetworkType.rinkeby
-      || this.netType === NetworkType.ropsten || this.netType === NetworkType.unknown))
-      || (!this.conf.useTestNet && this.netType === NetworkType.main)) {
+    if (this.conf.netType === this.netType || !this.conf.netType) {
       console.log('Web3Service: Is: ', this.netType);
       this.web3js.eth.getAccounts().then((accs: string[]) => {
         console.log('Web3Service: Got accounts: ' + JSON.stringify(accs));
@@ -139,9 +136,11 @@ export class EthService implements OnDestroy {
     this.web3js.eth.getAccounts().then((accs: string[]) => {
       if (accs[0] !== this.account.value) {
         this.account.next(accs[0]);
-        if (accs[0] !== undefined) { // && (this.web3Status.value !== Web3LoadingStatus.complete)
+        if (accs[0] !== undefined) {
           this.ownerAccount = accs[0];
-          this.web3Status.next(Web3LoadingStatus.complete);
+          if (this.web3Status.value !== Web3LoadingStatus.complete) {
+            this.web3Status.next(Web3LoadingStatus.complete);
+          }
           return;
         }
 
@@ -209,7 +208,7 @@ export class EthService implements OnDestroy {
     return new this.web3js.eth.Contract(abi, address);
   }
 
-  async payWithEther(amount: string, to: string): Promise<any> {
+  async payWithEth(to: string, amount: number): Promise<any> {
     const gasPrice = await this.getDefaultGasPriceGwei();
     const from = this.getOwnerAccount();
     return new Promise((resolve, reject) => {
