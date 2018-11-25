@@ -3,6 +3,7 @@ import { NgModule } from '@angular/core';
 import { HttpModule } from '@angular/http';
 
 import { EthService } from './eth.service';
+import { GasService } from './gas.service';
 
 @NgModule({
   imports: [
@@ -15,7 +16,7 @@ export class Web3ServiceModule {
   static forRoot(): ModuleWithProviders {
     return {
       ngModule: Web3ServiceModule,
-      providers: [EthService]
+      providers: [EthService, GasService]
     };
   }
 }
