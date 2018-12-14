@@ -3,4 +3,5 @@
  */
 
 export * from './lib/eth.service';
+export * from './lib/gas.service';
 export * from './lib/web3-service-lib.module';

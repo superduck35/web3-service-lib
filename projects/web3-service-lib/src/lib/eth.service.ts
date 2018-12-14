@@ -1,15 +1,14 @@
 import { Inject, Injectable, OnDestroy } from '@angular/core';
-import { Http, Response } from '@angular/http';
 import { BehaviorSubject, Observable, Subject, Subscription } from 'rxjs';
 
-import { AngularWaitBarrier } from 'blocking-proxy/built/lib/angular_wait_barrier';
+import { GasService } from './gas.service';
+import { toBaseUnit } from './utils';
 
 declare let require: any;
 const Web3 = require('web3');
 declare var window;
+declare var web3;
 
-const gas = { gasPrice: '8000000000', gas: '210000' };
-const gasStationApi = 'https://ethgasstation.info/json/ethgasAPI.json';
 
 export enum WalletType {
   metaMask = 'MetaMask',
@@ -40,7 +39,7 @@ export class EthService implements OnDestroy {
   accountInterval: any;
   netType: NetworkType;
   walletType: WalletType;
-  ownerAccount: string;
+  lastSeenAccount: string;
 
   public web3Status = new BehaviorSubject<Web3LoadingStatus>(Web3LoadingStatus.loading);
   public web3Status$ = this.web3Status.asObservable();
@@ -48,11 +47,13 @@ export class EthService implements OnDestroy {
   public account = new BehaviorSubject<string>(null);
   public account$ = this.account.asObservable();
 
-  constructor(@Inject('config') private conf: any = {}, protected http: Http) {
-    if (typeof window.ethereum !== 'undefined') {
-
-      this.web3js = new Web3(window.ethereum);
-
+  constructor(@Inject('Config') private conf: any = {}, protected gasService: GasService) {
+    if (window.ethereum || web3) {
+      if (window.ethereum) {
+        this.web3js = new Web3(window.ethereum);
+      } else {
+        this.web3js = new Web3(web3.currentProvider);
+      }
       this.setWalletType();
 
       try {
@@ -84,12 +85,6 @@ export class EthService implements OnDestroy {
       this.web3js = new Web3();
       this.web3Status.next(Web3LoadingStatus.noMetaMask);
     }
-
-    setTimeout(() => {
-      if (!this.netType) {
-        this.web3Status.next(Web3LoadingStatus.unableToConnectToSelectedNetwork);
-      }
-    }, 5000);
   }
 
   ngOnDestroy() {
@@ -117,13 +112,13 @@ export class EthService implements OnDestroy {
         console.log('Web3Service: Got accounts: ' + JSON.stringify(accs));
         this.account.next(accs[0]);
         if (accs[0]) {
-          this.ownerAccount = accs[0];
+          this.lastSeenAccount = accs[0];
           this.web3Status.next(Web3LoadingStatus.complete);
         } else {
           window.ethereum.enable();
           this.web3Status.next(Web3LoadingStatus.noAccountsAvailable);
         }
-        this.accountInterval = setInterval(() => this.checkAccountMetaMask(), 5000);
+        this.accountInterval = setInterval(() => this.checkForAccounts(), 5000);
       });
 
       return;
@@ -132,12 +127,12 @@ export class EthService implements OnDestroy {
     this.web3Status.next(Web3LoadingStatus.wrongNetwork);
   }
 
-  private checkAccountMetaMask() {
+  private checkForAccounts() {
     this.web3js.eth.getAccounts().then((accs: string[]) => {
       if (accs[0] !== this.account.value) {
         this.account.next(accs[0]);
         if (accs[0] !== undefined) {
-          this.ownerAccount = accs[0];
+          this.lastSeenAccount = accs[0];
           if (this.web3Status.value !== Web3LoadingStatus.complete) {
             this.web3Status.next(Web3LoadingStatus.complete);
           }
@@ -149,7 +144,7 @@ export class EthService implements OnDestroy {
     });
   }
 
-  async getEthBalanceAsync(userAddress: string = this.getOwnerAccount()): Promise<string> {
+  async getEthBalanceAsync(userAddress: string = this.currentAccount): Promise<string> {
     const balance = await this.web3js.eth.getBalance(userAddress);
     if (balance) {
       console.log(balance);
@@ -161,43 +156,16 @@ export class EthService implements OnDestroy {
     return Promise.reject(null);
   }
 
-  getOwnerAccount() {
+  get currentAccount() {
     if (this.web3Status.value === Web3LoadingStatus.noAccountsAvailable) {
       window.ethereum.enable().then(acc => {
         return acc[0];
       }).catch(e => {
-        return this.ownerAccount;
+        return this.lastSeenAccount;
       });
     } else {
-      return this.ownerAccount;
+      return this.lastSeenAccount;
     }
-  }
-
-  get defaultGasParam() {
-    return gas;
-  }
-
-  getDefaultGasPriceGwei(): Promise<string> {
-    return new Promise((resolve, reject) => {
-      try {
-        this.http.get(gasStationApi).toPromise().then(res => {
-          if (res.ok) {
-            resolve(JSON.parse(res.text())['fast'].toString() + '00000000');
-          } else {
-            resolve('11000000000');
-          }
-        }).catch(e => {
-          resolve('11000000000');
-        });
-      } catch (e) {
-        resolve('11000000000');
-      }
-    });
-  }
-
-
-  amountToERCTokens(amount, decimal) {
-    return amount * Math.pow(10, decimal);
   }
 
   createContractInstance(abi, address) {
@@ -208,9 +176,9 @@ export class EthService implements OnDestroy {
     return new this.web3js.eth.Contract(abi, address);
   }
 
-  async payWithEth(to: string, amount: number): Promise<any> {
-    const gasPrice = await this.getDefaultGasPriceGwei();
-    const from = this.getOwnerAccount();
+  async payWithEther(amount: string, to: string): Promise<any> {
+    const gasPrice = await this.gasService.getDefaultGasPriceGwei();
+    const from = this.currentAccount;
     return new Promise((resolve, reject) => {
       this.web3js.eth.sendTransaction({
         to,
@@ -220,6 +188,30 @@ export class EthService implements OnDestroy {
       }, async (err, txHash) => this.resolveTransaction(err, from, txHash, resolve, reject));
     });
   }
+
+  async payWithErc20Token(abi, recipient: string, amount: number, address, decimal, gasPrice): Promise<any> {
+    const from = this.currentAccount;
+    const contract = this.createContractInstance(abi, address);
+    const amountWithDecimals = this.amountToERCTokens(amount, decimal);
+
+    return new Promise(async (resolve, reject) => {
+      const tx = await contract.methods.transfer(recipient, amountWithDecimals);
+      let txGas, txGasPrice;
+      try {
+        txGas = await tx.estimateGas({ from });
+        txGasPrice = await this.gasService.getDefaultGasPriceGwei();
+      } catch (e) {
+        reject(e);
+      }
+      tx.send({ from, gas: txGas, gasPrice: txGasPrice },
+        async (err, txHash) => this.resolveTransaction(err, from, txHash, resolve, reject));
+    });
+  }
+
+  amountToERCTokens(amount, decimal): string {
+    return toBaseUnit(amount, decimal, this.web3js.utils.BN);
+  }
+
 
   async resolveTransaction(err, from, txHash, resolve, reject, onTxHash: Function = null) {
     if (err) {

@@ -13,7 +13,7 @@
 
 Check out the basic example:
  - `npm install`
- - `npm run start`
+ - `npm start`
  - Check out `localhost:4200` in your browser to make a basic ETH transaction on the current network
 
 ### Installation
@@ -23,15 +23,15 @@ Check out the basic example:
 ```
 import { Web3ServiceModule } from 'web3-service-lib';
 
-...
 
   imports: [
     BrowserModule,
     Web3ServiceModule.forRoot()
   ],
  
-...```
- - Then, to interact with the ETH.service...
+```
+
+ - Then, to interact with the ETH.service
 
 
 ## Usage
